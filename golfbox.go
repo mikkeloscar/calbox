@@ -42,9 +42,9 @@ func getTimes(username, password string) string {
 		panic(err)
 	}
 
-	fmt.Printf("%s", string(body))
 	r, _ := regexp.Compile(`(<\/?[^>]+(>|$)|\t)`)
-	fmt.Printf("%s", r.ReplaceAll(body, []byte{}))
+	// fmt.Printf("%s", r.ReplaceAll(body, []byte{}))
+	fmt.Printf("%#v\n", parseTimePage(string(r.ReplaceAll(body, []byte{}))))
 
 	return ""
 }
@@ -121,14 +121,36 @@ func parseTime(lines []string, tee *TeeTime) {
 		if start := matchingKey(l, "Kl.: "); start > 0 {
 			date += " " + l[start:len(l)-1]
 			t, _ := time.Parse("02-01-06 15:04", date)
-			tee.time = t
+			tee.time = &t
 			continue
 		}
 
-		if len(l) > 1 && '0' < l[1] && l[1] < '9' {
-			tee.players = parsePlayers
+		if tee.time != nil {
+			tee.players = parsePlayers(lines[i:])
+			break
 		}
 	}
+}
+
+func parsePlayers(lines []string) []*player {
+	var players []*player
+	i := 0
+
+	for i < len(lines) {
+		if len(lines[i]) > 1 && '0' < lines[0][1] && lines[0][1] < '9' {
+			p := &player{}
+			p.name = strings.TrimRight(lines[i+1], "\n")
+			p.number = strings.TrimRight(lines[i+2], "\n")
+			p.club = strings.TrimRight(lines[i+3], "\n")
+			p.hcp = strings.TrimRight(lines[i+4], "\n")
+			players = append(players, p)
+			i = i + 4
+		}
+
+		i++
+	}
+
+	return players
 }
 
 func matchingKey(line, key string) int {
@@ -143,7 +165,7 @@ func matchingKey(line, key string) int {
 
 type TeeTime struct {
 	club    string
-	time    time.Time
+	time    *time.Time
 	players []*player
 }
 
