@@ -16,8 +16,10 @@ const (
 	myTimesURL = "/site/my_golfBox/myTimes.asp"
 )
 
+var stripHTMLregex = regexp.MustCompile(`(<\/?[^>]+(>|$)|\t)`)
+
 // get page myTimes.asp at golfbox.dk
-func getTimes(username, password string) string {
+func getTimes(username, password string) []*TeeTime {
 	cookies := login(username, password)
 
 	req, err := http.NewRequest("GET", baseURL+myTimesURL, nil)
@@ -42,11 +44,9 @@ func getTimes(username, password string) string {
 		panic(err)
 	}
 
-	r, _ := regexp.Compile(`(<\/?[^>]+(>|$)|\t)`)
-	// fmt.Printf("%s", r.ReplaceAll(body, []byte{}))
-	fmt.Printf("%#v\n", parseTimePage(string(r.ReplaceAll(body, []byte{}))))
+	fmt.Printf("%s", body)
 
-	return ""
+	return parseTimePage(string(stripHTMLregex.ReplaceAll(body, []byte{})))
 }
 
 // login to golfbox.dk with username and password. Return session cookie.
@@ -77,77 +77,104 @@ func login(username, password string) []*http.Cookie {
 }
 
 func main() {
-	// login("14-1644", "2428")
 	getTimes("14-1644", "2428")
 
 }
 
+// functions for parsing mytimes.asp HTML page
+type timeParser struct {
+	lines []string
+	i     int
+}
+
+func (p *timeParser) current() string {
+	return p.lines[p.i]
+}
+
 func parseTimePage(page string) []*TeeTime {
 
-	lines := strings.Split(page, "\n")
+	var p timeParser
 
-	for i, l := range lines {
-		if len(l) > 9 && l[0:9] == "Mine tider" {
-			return parseTimes(lines[i:])
+	p.lines = strings.Split(page, "\r\n")
+
+	for p.i < len(p.lines) {
+		if p.lines[p.i] == "Mine tider" {
+			return p.parseTimes()
 		}
+		p.i++
 	}
 
 	return nil
 }
 
-func parseTimes(lines []string) []*TeeTime {
+func (p *timeParser) parseTimes() []*TeeTime {
 	var teeTimes []*TeeTime
 
-	for i, l := range lines {
-		if start := matchingKey(l, "Klub: "); start > 0 {
-			teeTime := &TeeTime{club: l[start : len(l)-1]}
-			parseTime(lines[i:], teeTime)
+	for p.i < len(p.lines) {
+		if start := matchingKey(p.current(), "Klub: "); start > 0 {
+			teeTime := &TeeTime{club: p.current()[start:]}
+			p.i++
+			p.parseTime(teeTime)
 			teeTimes = append(teeTimes, teeTime)
+			continue
 		}
+
+		p.i++
 	}
 
 	return teeTimes
 }
 
-func parseTime(lines []string, tee *TeeTime) {
+func (p *timeParser) parseTime(tee *TeeTime) {
 	var date string
 
-	for i, l := range lines {
-		if start := matchingKey(l, "Dato: "); start > 0 {
-			date = l[start : len(l)-1]
+	for p.i < len(p.lines) {
+		if start := matchingKey(p.current(), "Dato: "); start > 0 {
+			date = p.current()[start:]
+			p.i++
 			continue
 		}
 
-		if start := matchingKey(l, "Kl.: "); start > 0 {
-			date += " " + l[start:len(l)-1]
+		if start := matchingKey(p.current(), "Kl.: "); start > 0 {
+			date += " " + p.current()[start:]
 			t, _ := time.Parse("02-01-06 15:04", date)
 			tee.time = &t
+			p.i++
 			continue
 		}
 
 		if tee.time != nil {
-			tee.players = parsePlayers(lines[i:])
+			tee.players = p.parsePlayers()
 			break
 		}
+
+		p.i++
 	}
 }
 
-func parsePlayers(lines []string) []*player {
+func (p *timeParser) parsePlayers() []*player {
 	var players []*player
-	i := 0
 
-	for i < len(lines) {
-		if len(lines[i]) > 1 && '0' < lines[0][1] && lines[0][1] < '9' {
-			p := &player{}
-			p.name = strings.TrimRight(lines[i+1], "\n")
-			p.number = strings.TrimRight(lines[i+2], "\n")
-			p.club = strings.TrimRight(lines[i+3], "\n")
-			p.hcp = strings.TrimRight(lines[i+4], "\n")
-			players = append(players, p)
-			i = i + 4
+	for p.i < len(p.lines) {
+		l := p.current()
+		if len(l) == 1 && '0' < l[0] && l[0] < '9' {
+			pl := &player{}
+			p.i++
+			pl.name = p.current()
+			p.i++
+			pl.number = p.current()
+			p.i++
+			pl.club = p.current()
+			p.i++
+			pl.hcp = p.current()
+			players = append(players, pl)
 		}
 
-		i++
+		if start := matchingKey(p.current(), "Klub: "); start > 0 {
+			break
+		}
+
+		p.i++
 	}
 
 	return players
@@ -157,7 +184,7 @@ func matchingKey(line, key string) int {
 	length := len(key)
 
 	if len(line) > length && line[0:length] == key {
-		return length + 1
+		return length
 	}
 
 	return 0
