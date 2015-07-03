@@ -44,7 +44,7 @@ func getTimes(username, password string) []*TeeTime {
 		panic(err)
 	}
 
-	fmt.Printf("%s", body)
+	// fmt.Printf("%s", body)
 
 	return parseTimePage(string(stripHTMLregex.ReplaceAll(body, []byte{})))
 }
@@ -77,8 +77,15 @@ func login(username, password string) []*http.Cookie {
 }
 
 func main() {
-	getTimes("14-1644", "2428")
 
+	times := getTimes("14-1644", "2428")
+	for _, t := range times {
+		fmt.Println(t.club)
+		fmt.Println(t.time)
+		for _, p := range t.players {
+			fmt.Printf("%#v\n", p)
+		}
+	}
 }
 
 // functions for parsing mytimes.asp HTML page
@@ -136,8 +143,13 @@ func (p *timeParser) parseTime(tee *TeeTime) {
 		}
 
 		if start := matchingKey(p.current(), "Kl.: "); start > 0 {
+			loc, err := time.LoadLocation("Europe/Copenhagen")
+			if err != nil {
+				panic(err)
+			}
+
 			date += " " + p.current()[start:]
-			t, _ := time.Parse("02-01-06 15:04", date)
+			t, _ := time.ParseInLocation("02-01-06 15:04", date, loc)
 			tee.time = &t
 			p.i++
 			continue
