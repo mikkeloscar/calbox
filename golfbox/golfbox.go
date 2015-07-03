@@ -1,8 +1,7 @@
-package main
+package golfbox
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"regexp"
@@ -19,7 +18,7 @@ const (
 var stripHTMLregex = regexp.MustCompile(`(<\/?[^>]+(>|$)|\t)`)
 
 // get page myTimes.asp at golfbox.dk
-func getTimes(username, password string) []*TeeTime {
+func GetTimes(username, password string) []*TeeTime {
 	cookies := login(username, password)
 
 	req, err := http.NewRequest("GET", baseURL+myTimesURL, nil)
@@ -76,18 +75,6 @@ func login(username, password string) []*http.Cookie {
 	return resp.Cookies()
 }
 
-func main() {
-
-	times := getTimes("14-1644", "2428")
-	for _, t := range times {
-		fmt.Println(t.club)
-		fmt.Println(t.time)
-		for _, p := range t.players {
-			fmt.Printf("%#v\n", p)
-		}
-	}
-}
-
 // functions for parsing mytimes.asp HTML page
 type timeParser struct {
 	lines []string
@@ -119,7 +106,7 @@ func (p *timeParser) parseTimes() []*TeeTime {
 
 	for p.i < len(p.lines) {
 		if start := matchingKey(p.current(), "Klub: "); start > 0 {
-			teeTime := &TeeTime{club: p.current()[start:]}
+			teeTime := &TeeTime{Club: p.current()[start:]}
 			p.i++
 			p.parseTime(teeTime)
 			teeTimes = append(teeTimes, teeTime)
@@ -150,13 +137,13 @@ func (p *timeParser) parseTime(tee *TeeTime) {
 
 			date += " " + p.current()[start:]
 			t, _ := time.ParseInLocation("02-01-06 15:04", date, loc)
-			tee.time = &t
+			tee.Time = &t
 			p.i++
 			continue
 		}
 
-		if tee.time != nil {
-			tee.players = p.parsePlayers()
+		if tee.Time != nil {
+			tee.Players = p.parsePlayers()
 			break
 		}
 
@@ -164,21 +151,21 @@ func (p *timeParser) parseTime(tee *TeeTime) {
 	}
 }
 
-func (p *timeParser) parsePlayers() []*player {
-	var players []*player
+func (p *timeParser) parsePlayers() []*Player {
+	var players []*Player
 
 	for p.i < len(p.lines) {
 		l := p.current()
 		if len(l) == 1 && '0' < l[0] && l[0] < '9' {
-			pl := &player{}
+			pl := &Player{}
 			p.i++
-			pl.name = p.current()
+			pl.Name = p.current()
 			p.i++
-			pl.number = p.current()
+			pl.Number = p.current()
 			p.i++
-			pl.club = p.current()
+			pl.Club = p.current()
 			p.i++
-			pl.hcp = p.current()
+			pl.HCP = p.current()
 			players = append(players, pl)
 		}
 
@@ -203,14 +190,14 @@ func matchingKey(line, key string) int {
 }
 
 type TeeTime struct {
-	club    string
-	time    *time.Time
-	players []*player
+	Club    string
+	Time    *time.Time
+	Players []*Player
 }
 
-type player struct {
-	name   string
-	number string
-	club   string
-	hcp    string
+type Player struct {
+	Name   string
+	Number string
+	Club   string
+	HCP    string
 }
