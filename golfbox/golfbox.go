@@ -17,13 +17,23 @@ const (
 
 var stripHTMLregex = regexp.MustCompile(`(<\/?[^>]+(>|$)|\t)`)
 
-// get page myTimes.asp at golfbox.dk
-func GetTimes(username, password string) []*TeeTime {
-	cookies := login(username, password)
+type GolfBox struct {
+	username string
+	password string
+}
+
+// Conn setup connection to golfbox (username and password)
+func Conn(username, password string) *GolfBox {
+	return &GolfBox{username, password}
+}
+
+// GetTimes get page myTimes.asp at golfbox.dk
+func (gb *GolfBox) GetTimes() ([]*TeeTime, error) {
+	cookies := gb.login()
 
 	req, err := http.NewRequest("GET", baseURL+myTimesURL, nil)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	// add cookies
@@ -34,29 +44,27 @@ func GetTimes(username, password string) []*TeeTime {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	// fmt.Printf("%s", body)
-
-	return parseTimePage(string(stripHTMLregex.ReplaceAll(body, []byte{})))
+	return parseTimePage(string(stripHTMLregex.ReplaceAll(body, []byte{}))), nil
 }
 
 // login to golfbox.dk with username and password. Return session cookie.
-func login(username, password string) []*http.Cookie {
+func (gb *GolfBox) login() []*http.Cookie {
 	var form bytes.Buffer
 
 	form.WriteString("loginform.submitted=true&command=login")
 	form.WriteString("&loginform.username=")
-	form.WriteString(username)
+	form.WriteString(gb.username)
 	form.WriteString("&loginform.password=")
-	form.WriteString(password)
+	form.WriteString(gb.password)
 	form.WriteString("&LOGIN=LOGIN")
 
 	req, err := http.NewRequest("POST", baseURL+loginURL, &form)
