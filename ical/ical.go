@@ -11,11 +11,11 @@ import (
 const (
 	eol     = "\r\n"
 	timeFmt = "20060102T150400Z"
-	domain  = "@cal.moscar.net"
-	prodid  = "calbox"
 )
 
 type VCalendar struct {
+	Domain  string
+	ProdID  string
 	VEvents []*VEvent
 }
 
@@ -26,11 +26,11 @@ func (c *VCalendar) String() string {
 	buffer.WriteString(eol)
 	buffer.WriteString("VERSION:2.0")
 	buffer.WriteString(eol)
-	buffer.WriteString("PRODID:-" + prodid)
+	buffer.WriteString("PRODID:-" + c.ProdID)
 	buffer.WriteString(eol)
 
 	for _, e := range c.VEvents {
-		buffer.WriteString(e.String())
+		buffer.WriteString(e.String(c.Domain))
 	}
 
 	buffer.WriteString("END:VCALENDAR")
@@ -47,7 +47,7 @@ type VEvent struct {
 	End   time.Time
 }
 
-func (e *VEvent) String() string {
+func (e *VEvent) String(domain string) string {
 	var buffer bytes.Buffer
 
 	// create uid from summary and startdate

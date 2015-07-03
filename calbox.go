@@ -13,6 +13,11 @@ import (
 	"github.com/mikkeloscar/calbox/ical"
 )
 
+const (
+	domain = "@cal.moscar.net"
+	prodid = "calbox"
+)
+
 func main() {
 	// times := golfbox.GetTimes("14-1644", "2428")
 	// for _, t := range times {
@@ -80,7 +85,11 @@ func getCal(user, pass string) (string, error) {
 		events = append(events, event)
 	}
 
-	cal := &ical.VCalendar{events}
+	cal := &ical.VCalendar{
+		Domain:  domain,
+		ProdID:  prodid,
+		VEvents: events,
+	}
 
 	return cal.String(), nil
 }
