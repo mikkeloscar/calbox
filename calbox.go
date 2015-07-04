@@ -19,15 +19,6 @@ const (
 )
 
 func main() {
-	// times := golfbox.GetTimes("14-1644", "2428")
-	// for _, t := range times {
-	// 	fmt.Println(t.Club)
-	// 	fmt.Println(t.Time)
-	// 	for _, p := range t.Players {
-	// 		fmt.Printf("%#v\n", p)
-	// 	}
-	// }
-
 	port := flag.Int("p", 4220, "HTTP server port")
 	flag.Parse()
 
