@@ -28,7 +28,7 @@ func main() {
 	// 	}
 	// }
 
-	port := flag.Int("p", 1644, "HTTP server port")
+	port := flag.Int("p", 4220, "HTTP server port")
 	flag.Parse()
 
 	webServer(*port)
@@ -45,7 +45,6 @@ func calHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// TODO handle err
 		cal, _ := getCal(user, pass)
-		fmt.Println(cal)
 		io.WriteString(w, cal)
 	}
 }
@@ -77,7 +76,7 @@ func getCal(user, pass string) (string, error) {
 		// new event
 		event := &ical.VEvent{
 			Summary:     "Golf tid: " + teeTime.Club,
-			Description: "bla bla",
+			Description: teeTime.StrPlayers(),
 			Start:       *teeTime.Time,
 			End:         teeTime.Time.Add(time.Duration(4) * time.Hour),
 		}

@@ -2,6 +2,7 @@ package golfbox
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"regexp"
@@ -203,9 +204,33 @@ type TeeTime struct {
 	Players []*Player
 }
 
+func (t *TeeTime) StrPlayers() string {
+	var buf bytes.Buffer
+
+	for i, p := range t.Players {
+		buf.WriteString(p.String())
+
+		if i < len(t.Players)-1 {
+			buf.WriteByte('\n')
+			buf.WriteByte('\n')
+		}
+	}
+
+	return buf.String()
+}
+
 type Player struct {
 	Name   string
 	Number string
 	Club   string
 	HCP    string
+}
+
+func (p *Player) String() string {
+	var buf bytes.Buffer
+
+	buf.WriteString(fmt.Sprintf("%s (%s)\n", p.Name, p.Number))
+	buf.WriteString(fmt.Sprintf("%s (%s)", p.Number, p.Club))
+
+	return buf.String()
 }
