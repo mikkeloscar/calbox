@@ -1,0 +1,10 @@
+[Unit]
+Description=Expose golfbox.dk tee times through icalendar
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/calbox
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
