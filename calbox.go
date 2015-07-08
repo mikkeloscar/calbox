@@ -1,11 +1,12 @@
 package main
 
 import (
+	"encoding/base64"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -14,8 +15,8 @@ import (
 )
 
 const (
-	domain = "@cal.moscar.net"
-	prodid = "calbox"
+	domain = "@calbox.moscar.net"
+	prodid = "-//moscar.net/Calbox//DA"
 )
 
 func main() {
@@ -26,9 +27,11 @@ func main() {
 }
 
 func calHandler(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query()
-	user := q.Get("user")
-	pass := q.Get("pass")
+	vars := mux.Vars(r)
+	id := vars["id"]
+
+	// TODO handle err
+	user, pass, _ := decodeID(id)
 
 	if len(user) == 0 || len(pass) == 0 {
 		w.WriteHeader(http.StatusNotFound)
@@ -36,13 +39,14 @@ func calHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// TODO handle err
 		cal, _ := getCal(user, pass)
-		io.WriteString(w, cal)
+		w.Header().Set("Content-Type", "text/calendar; charset=UTF-8")
+		w.Write(cal)
 	}
 }
 
 func webServer(port int) {
 	r := mux.NewRouter()
-	r.HandleFunc("/", calHandler).Methods("GET")
+	r.HandleFunc("/{id}.ics", calHandler).Methods("GET")
 
 	http.Handle("/", r)
 
@@ -53,12 +57,12 @@ func webServer(port int) {
 	}
 }
 
-func getCal(user, pass string) (string, error) {
+func getCal(user, pass string) ([]byte, error) {
 	gb := golfbox.Conn(user, pass)
 
 	times, err := gb.GetTimes()
 	if err != nil {
-		return "", err
+		return []byte{}, err
 	}
 
 	events := make([]*ical.VEvent, 0, len(times))
@@ -76,10 +80,25 @@ func getCal(user, pass string) (string, error) {
 	}
 
 	cal := &ical.VCalendar{
+		Name:    "Calbox",
 		Domain:  domain,
 		ProdID:  prodid,
 		VEvents: events,
 	}
 
-	return cal.String(), nil
+	return []byte(cal.String()), nil
+}
+
+func decodeID(id string) (string, string, error) {
+	data, err := base64.StdEncoding.DecodeString(id)
+	if err != nil {
+		return "", "", err
+	}
+
+	split := strings.Split(string(data), ":")
+	if len(split) != 2 {
+		return "", "", fmt.Errorf("invalid id format")
+	}
+
+	return split[0], split[1], nil
 }

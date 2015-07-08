@@ -211,8 +211,7 @@ func (t *TeeTime) StrPlayers() string {
 		buf.WriteString(p.String())
 
 		if i < len(t.Players)-1 {
-			buf.WriteByte('\n')
-			buf.WriteByte('\n')
+			buf.WriteString("\\n\\n")
 		}
 	}
 
@@ -229,7 +228,7 @@ type Player struct {
 func (p *Player) String() string {
 	var buf bytes.Buffer
 
-	buf.WriteString(fmt.Sprintf("%s (%s)\n", p.Name, p.Number))
+	buf.WriteString(fmt.Sprintf("%s (%s)\\n", p.Name, p.HCP))
 	buf.WriteString(fmt.Sprintf("%s (%s)", p.Number, p.Club))
 
 	return buf.String()

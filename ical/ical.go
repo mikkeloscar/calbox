@@ -10,10 +10,11 @@ import (
 
 const (
 	eol     = "\r\n"
-	timeFmt = "20060102T150400Z"
+	timeFmt = "20060102T150405Z"
 )
 
 type VCalendar struct {
+	Name    string
 	Domain  string
 	ProdID  string
 	VEvents []*VEvent
@@ -24,13 +25,19 @@ func (c *VCalendar) String() string {
 
 	buffer.WriteString("BEGIN:VCALENDAR")
 	buffer.WriteString(eol)
+	buffer.WriteString("PRODID:" + c.ProdID)
+	buffer.WriteString(eol)
 	buffer.WriteString("VERSION:2.0")
 	buffer.WriteString(eol)
-	buffer.WriteString("PRODID:-" + c.ProdID)
+	buffer.WriteString("CALSCALE:GREGORIAN")
 	buffer.WriteString(eol)
+	buffer.WriteString("X-WR-CALNAME:" + c.Name)
+	buffer.WriteString(eol)
+	// buffer.WriteString("METHOD:PUBLISH")
+	// buffer.WriteString(eol)
 
 	for _, e := range c.VEvents {
-		buffer.WriteString(e.String(c.Domain))
+		buffer.WriteString(e.String(c))
 	}
 
 	buffer.WriteString("END:VCALENDAR")
@@ -47,27 +54,27 @@ type VEvent struct {
 	End   time.Time
 }
 
-func (e *VEvent) String(domain string) string {
+func (e *VEvent) String(calendar *VCalendar) string {
 	var buffer bytes.Buffer
 
 	// create uid from summary and startdate
 	h := sha1.New()
-	io.WriteString(h, e.Summary+e.Start.Format(timeFmt))
+	io.WriteString(h, e.Summary+e.Start.UTC().Format(timeFmt))
 	uid := base64.URLEncoding.EncodeToString(h.Sum(nil))
 
 	buffer.WriteString("BEGIN:VEVENT")
 	buffer.WriteString(eol)
 	buffer.WriteString("UID:")
-	buffer.WriteString(uid + domain)
+	buffer.WriteString(uid + calendar.Domain)
 	buffer.WriteString(eol)
 	buffer.WriteString("DTSTAMP:")
-	buffer.WriteString(time.Now().Format(timeFmt))
+	buffer.WriteString(time.Now().UTC().Format(timeFmt))
 	buffer.WriteString(eol)
 	buffer.WriteString("DTSTART:")
-	buffer.WriteString(e.Start.Format(timeFmt))
+	buffer.WriteString(e.Start.UTC().Format(timeFmt))
 	buffer.WriteString(eol)
 	buffer.WriteString("DTEND:")
-	buffer.WriteString(e.End.Format(timeFmt))
+	buffer.WriteString(e.End.UTC().Format(timeFmt))
 	buffer.WriteString(eol)
 	buffer.WriteString("SUMMARY:")
 	buffer.WriteString(e.Summary)
