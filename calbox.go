@@ -1,12 +1,10 @@
 package main
 
 import (
-	"encoding/base64"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -15,6 +13,7 @@ import (
 )
 
 const (
+	url    = "https://calbox.moscar.net/%s.ics"
 	domain = "@calbox.moscar.net"
 	prodid = "-//moscar.net/Calbox//DA"
 )
@@ -28,25 +27,31 @@ func main() {
 
 func calHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	id := vars["id"]
+	guid := vars["guid"]
 
-	// TODO handle err
-	user, pass, _ := decodeID(id)
+	cal, _ := getCal(guid)
+	w.Header().Set("Content-Type", "text/calendar; charset=UTF-8")
+	w.Write(cal)
+}
 
-	if len(user) == 0 || len(pass) == 0 {
+func authHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	user := vars["user"]
+	pass := vars["pass"]
+
+	guid, err := golfbox.Auth(user, pass)
+	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("invalid user\n"))
 	} else {
-		// TODO handle err
-		cal, _ := getCal(user, pass)
-		w.Header().Set("Content-Type", "text/calendar; charset=UTF-8")
-		w.Write(cal)
+		w.Write([]byte(fmt.Sprintf(url, guid)))
 	}
 }
 
 func webServer(port int) {
 	r := mux.NewRouter()
-	r.HandleFunc("/{id}.ics", calHandler).Methods("GET")
+	r.HandleFunc("/{guid}.ics", calHandler).Methods("GET")
+	r.HandleFunc("/{user}/{pass}", authHandler).Methods("GET")
 
 	http.Handle("/", r)
 
@@ -57,11 +62,8 @@ func webServer(port int) {
 	}
 }
 
-func getCal(user, pass string) ([]byte, error) {
-	gb, err := golfbox.Conn(user, pass)
-	if err != nil {
-		return []byte{}, err
-	}
+func getCal(guid string) ([]byte, error) {
+	gb := golfbox.Conn(guid)
 
 	times, err := gb.TeeTimes()
 	if err != nil {
@@ -90,18 +92,4 @@ func getCal(user, pass string) ([]byte, error) {
 	}
 
 	return []byte(cal.String()), nil
-}
-
-func decodeID(id string) (string, string, error) {
-	data, err := base64.StdEncoding.DecodeString(id)
-	if err != nil {
-		return "", "", err
-	}
-
-	split := strings.Split(string(data), ":")
-	if len(split) != 2 {
-		return "", "", fmt.Errorf("invalid id format")
-	}
-
-	return split[0], split[1], nil
 }

@@ -22,9 +22,7 @@ const (
 var stripHTMLregex = regexp.MustCompile(`(<\/?[^>]+(>|$)|\t)`)
 
 type GolfBox struct {
-	username string
-	password string
-	guid     string
+	guid string
 }
 
 type AuthResp struct {
@@ -47,10 +45,10 @@ type MemberResp struct {
 	Lastname  string `json:"Member_Lastname"`
 }
 
-func Conn(username, password string) (*GolfBox, error) {
+func Auth(username, password string) (string, error) {
 	req, err := http.NewRequest("GET", baseURL+fmt.Sprintf(authURL, username, password), nil)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	req.Header.Set("Accept", "application/json")
 	req.SetBasicAuth(APIUser, APIPassword)
@@ -58,7 +56,7 @@ func Conn(username, password string) (*GolfBox, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	defer resp.Body.Close()
 
@@ -66,10 +64,14 @@ func Conn(username, password string) (*GolfBox, error) {
 	result := new(AuthResp)
 	err = dec.Decode(result)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return &GolfBox{username, password, result.Guid}, nil
+	return result.Guid, nil
+}
+
+func Conn(guid string) *GolfBox {
+	return &GolfBox{guid}
 }
 
 // TeeTimes API call
