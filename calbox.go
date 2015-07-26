@@ -58,9 +58,12 @@ func webServer(port int) {
 }
 
 func getCal(user, pass string) ([]byte, error) {
-	gb := golfbox.Conn(user, pass)
+	gb, err := golfbox.Conn(user, pass)
+	if err != nil {
+		return []byte{}, err
+	}
 
-	times, err := gb.GetTimes()
+	times, err := gb.TeeTimes()
 	if err != nil {
 		return []byte{}, err
 	}
