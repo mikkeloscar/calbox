@@ -3,4 +3,4 @@ go:
 - 1.5
 
 install:
-  - go get -d -v ./..
+  - go get -t -v ./...
