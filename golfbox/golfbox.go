@@ -15,8 +15,8 @@ const (
 	authURL     = "/GolferPortal/Member/DK/Security/%s/%s/Authenticate"
 	teeTimesURL = "/GolferPortal/GolfBox/App/Booking/TeeTimes/%s"
 
-	APIUser     = "GolferPortal"
-	APIPassword = "CSaHWV6jEV"
+	APIUser     = "-"
+	APIPassword = "-"
 )
 
 var stripHTMLregex = regexp.MustCompile(`(<\/?[^>]+(>|$)|\t)`)
